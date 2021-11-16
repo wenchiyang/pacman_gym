@@ -174,9 +174,9 @@ class PacmanEnv(gym.Env):
         # return self.game.state, reward, self.game.gameOver, dict()
         return self.my_render(), reward, self.game.gameOver, eps_info
 
-    def reset(self):
+    def reset(self, render=True):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
-        self.beQuiet = True
+        self.beQuiet = not render
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay
