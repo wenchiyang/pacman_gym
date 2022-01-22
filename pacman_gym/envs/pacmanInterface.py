@@ -41,12 +41,10 @@ class PacmanEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
     def __init__(
-        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time
+        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time, render
     ):
         """"""
-
-        args = readCommand(
-            [
+        input_args = [
                 "--layout",
                 layout,
                 "--reward-goal",
@@ -56,9 +54,12 @@ class PacmanEnv(gym.Env):
                 "--reward-food",
                 str(reward_food),
                 "--reward-time",
-                str(reward_time),
+                str(reward_time)
             ]
-        )
+        if not render:
+            input_args.append("--quietTextGraphics")
+
+        args = readCommand(input_args)
 
         # set OpenAI gym variables
         self._seed = seed
@@ -97,26 +98,31 @@ class PacmanEnv(gym.Env):
         ######
 
         self.grid_size = 1
+        self.grid_height = self.layout.height
+        self.grid_weight = self.layout.width
+        self.color_channels = 1
 
         import __main__
 
         __main__.__dict__["_display"] = self.display
 
         self.observation_space = Box(
-            0,
-            1,
-            (
-                self.layout.height * self.grid_size,
-                self.layout.width * self.grid_size
+            low=0,
+            high=1,
+            shape=(
+                self.grid_height * self.grid_size,
+                self.grid_weight * self.grid_size
             )
         )
         self.action_space = Discrete(5) # default datatype is np.int64
+        self.action_size = 5
         self.np_random = rd.seed(self._seed)
         self.reward_range = (0, 10)
+        self.beQuiet = not render
 
         self.reset()
 
-    def step(self, action):
+    def step(self, action, observation_mode="human"):
         """
         Parameters
         ----------
@@ -153,7 +159,7 @@ class PacmanEnv(gym.Env):
         # perform "doAction" for the pacman
         self.game.agents[agentIndex].doAction(self.game.state, action)
         self.game.take_action(agentIndex, action)
-        self.render()
+        # self.render()
 
 
         reward = self.game.state.data.scoreChange
@@ -174,9 +180,9 @@ class PacmanEnv(gym.Env):
         # return self.game.state, reward, self.game.gameOver, dict()
         return self.my_render(), reward, self.game.gameOver, eps_info
 
-    def reset(self, render=True):
+    def reset(self, observation_mode="human"):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
-        self.beQuiet = not render
+
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay
@@ -205,9 +211,6 @@ class PacmanEnv(gym.Env):
 
     def render(self, mode="human", close=False):
         self.game.render()
-        # if mode == "rgb_array":
-        #     image = self.display.get_image()
-        #     return image
 
     def my_render(self):
         return self.game.my_render(grid_size=self.grid_size)
