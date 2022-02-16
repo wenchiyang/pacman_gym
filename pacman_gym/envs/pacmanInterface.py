@@ -89,25 +89,12 @@ def generate_layout_text(width, height, pacman_position, ghost_positions, food_p
         layout.append(row)
     return '\n'.join(layout)
 
-# def sample_positions(layout):
-#     all_valid_positions = []
-#     for h in range(layout.height):
-#         for w in range(layout.width):
-#             if not layout.walls[w][h]:
-#                 all_valid_positions.append((w, h))
-#
-#     pos_num = len(layout.agentPositions)
-#     food_num = np.count_nonzero(np.array(layout.food.data) == True)
-#     positions = rd.sample(all_valid_positions, pos_num + food_num)
-#
-#     return positions[:pos_num], positions[pos_num:]
-
 
 class PacmanEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
     def __init__(
-        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time, render
+        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time, render, max_steps
     ):
         """"""
         input_args = [
@@ -153,6 +140,7 @@ class PacmanEnv(gym.Env):
         self.reward_crash = args["reward_crash"]
         self.reward_food = args["reward_food"]
         self.reward_time = args["reward_time"]
+        self.max_steps = max_steps
 
         self.rules = ClassicGameRules(
             args["timeout"],
@@ -227,6 +215,7 @@ class PacmanEnv(gym.Env):
         self.game.agents[agentIndex].doAction(self.game.state, action)
         self.game.take_action(agentIndex, action)
         # self.render()
+        done = self.game.gameOver or self._check_if_maxsteps()
 
 
         reward = self.game.state.data.scoreChange
@@ -243,9 +232,12 @@ class PacmanEnv(gym.Env):
         #         self.game.take_action(agentIndex, action)
         #         self.render()
         #         reward += self.game.state.data.scoreChange
+        info = dict()
+        if done:
+            info["maxsteps_used"] = self._check_if_maxsteps()
 
         # return self.game.state, reward, self.game.gameOver, dict()
-        return self.my_render(), reward, self.game.gameOver, dict()
+        return self.my_render(), reward, done, info
 
     def reset(self, observation_mode="human"):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
@@ -290,6 +282,9 @@ class PacmanEnv(gym.Env):
 
     def get_action_meanings(self):
         return self.A
+
+    def _check_if_maxsteps(self):
+        return (self.max_steps == len(self.game.moveHistory))
 
     @staticmethod
     def constraint_func(self):
