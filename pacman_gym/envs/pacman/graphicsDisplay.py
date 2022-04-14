@@ -352,7 +352,7 @@ class PacmanGraphics:
         if ghost.scaredTimer > 0:
             return SCARED_COLOR
         else:
-            return GHOST_COLORS[ghostIndex]
+            return GHOST_COLORS[ghostIndex%6]
 
     def drawGhost(self, ghost, agentIndex):
         pos = self.getPosition(ghost)

@@ -862,6 +862,10 @@ class Game:
         part one of self.run():
         """
         self.display.initialize(self.state.data)
+        # try:
+        #     render
+        # except:
+        #
         self.numMoves = 0
 
         ###self.display.initialize(self.state.makeObservation(1).data)

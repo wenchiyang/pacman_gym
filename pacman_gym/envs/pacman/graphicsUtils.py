@@ -61,39 +61,43 @@ def begin_graphics(width=640, height=480, color=formatColor(0, 0, 0), title=None
     # Check for duplicate call
     if _root_window is not None:
         # Lose the window.
-        _root_window.destroy()
-
-    # Save the canvas size parameters
-    _canvas_xs, _canvas_ys = width - 1, height - 1
-    _canvas_x, _canvas_y = 0, _canvas_ys
-    _bg_color = color
-
-    # Create the root window
-    _root_window = tkinter.Tk()
-    _root_window.protocol('WM_DELETE_WINDOW', _destroy_window)
-    _root_window.title(title or 'Graphics Window')
-    _root_window.resizable(0, 0)
-
-    # Create the canvas object
-    try:
-        _canvas = tkinter.Canvas(_root_window, width=width, height=height)
+        # _root_window.destroy()
         _canvas.pack()
         draw_background()
         _canvas.update()
-    except:
-        _root_window = None
-        raise
+        pass
+    else:
+        # Save the canvas size parameters
+        _canvas_xs, _canvas_ys = width - 1, height - 1
+        _canvas_x, _canvas_y = 0, _canvas_ys
+        _bg_color = color
 
-    # Bind to key-down and key-up events
-    _root_window.bind( "<KeyPress>", _keypress )
-    _root_window.bind( "<KeyRelease>", _keyrelease )
-    _root_window.bind( "<FocusIn>", _clear_keys )
-    _root_window.bind( "<FocusOut>", _clear_keys )
-    _root_window.bind( "<Button-1>", _leftclick )
-    _root_window.bind( "<Button-2>", _rightclick )
-    _root_window.bind( "<Button-3>", _rightclick )
-    _root_window.bind( "<Control-Button-1>", _ctrl_leftclick)
-    _clear_keys()
+        # Create the root window
+        _root_window = tkinter.Tk()
+        _root_window.protocol('WM_DELETE_WINDOW', _destroy_window)
+        _root_window.title(title or 'Graphics Window')
+        _root_window.resizable(0, 0)
+
+        # Create the canvas object
+        try:
+            _canvas = tkinter.Canvas(_root_window, width=width, height=height)
+            _canvas.pack()
+            draw_background()
+            _canvas.update()
+        except:
+            _root_window = None
+            raise
+
+        # Bind to key-down and key-up events
+        _root_window.bind( "<KeyPress>", _keypress )
+        _root_window.bind( "<KeyRelease>", _keyrelease )
+        _root_window.bind( "<FocusIn>", _clear_keys )
+        _root_window.bind( "<FocusOut>", _clear_keys )
+        _root_window.bind( "<Button-1>", _leftclick )
+        _root_window.bind( "<Button-2>", _rightclick )
+        _root_window.bind( "<Button-3>", _rightclick )
+        _root_window.bind( "<Control-Button-1>", _ctrl_leftclick)
+        _clear_keys()
 
 _leftclick_loc = None
 _rightclick_loc = None

@@ -1,16 +1,74 @@
-
 import gym
 from gym.spaces import Box, Discrete
 
 from .pacman.pacman import readCommand, ClassicGameRules
 import numpy as np
+from .pacman.layout import Layout
 import random as rd
+import networkx as nx
+import random
 
-class PacmanEnv(gym.Env):
+def sample_layout(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges):
+    layout_text = sample_l(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges)
+    new_layout = Layout(layout_text.split('\n'))
+    return new_layout
+
+def sample_l(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges):
+    layout = None
+    pacman_position = None
+    ghost_positions = None
+    food_positions = None
+    while not valid(layout, width, height, pacman_position, food_positions, ghost_positions, non_wall_positions, wall_positions, all_edges):
+        positions = rd.sample(non_wall_positions, num_agents + num_food)
+        pacman_position = positions[0]
+        ghost_positions = positions[1:num_agents]
+        food_positions = positions[num_agents:]
+        layout = generate_layout_text(width, height, pacman_position, ghost_positions, food_positions, wall_positions)
+
+    return layout
+
+
+def valid(layout, width, height, pacman_position, food_positions, ghost_positions, non_wall_positions, wall_positions, all_edges):
+    if layout is None:
+        return False
+    valid_postions = [l for l in non_wall_positions if l not in ghost_positions]
+    g = nx.Graph()
+    g.add_nodes_from(valid_postions)
+
+    for n1, n2 in all_edges:
+        if n1 in valid_postions and n2 in valid_postions:
+            g.add_edge(n1, n2)
+
+    for food_position in food_positions:
+        if not nx.has_path(g, pacman_position, food_position):
+            print("not valid")
+            return False
+    return True
+
+def generate_layout_text(width, height, pacman_position, ghost_positions, food_positions, wall_positions):
+    layout = []
+    for r in range(height):
+        row = ''
+        for c in range(width):
+            if (r,c) in wall_positions:
+                row += '%'
+            elif (r,c) == pacman_position:
+                row += 'P'
+            elif (r, c) in ghost_positions:
+                row += 'G'
+            elif (r, c) in food_positions:
+                row += '.'
+            else:
+                row += ' '
+        layout.append(row)
+    return '\n'.join(layout)
+
+
+class GoalFindingEnv(gym.Env):
     metadata = {"render.modes": ["human"]}
 
     def __init__(
-        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time, render, max_steps
+        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time, render, max_steps, num_maps
     ):
         """"""
         input_args = [
@@ -57,6 +115,7 @@ class PacmanEnv(gym.Env):
         self.reward_food = args["reward_food"]
         self.reward_time = args["reward_time"]
         self.max_steps = max_steps
+        self.num_maps = num_maps
 
         self.rules = ClassicGameRules(
             args["timeout"],
@@ -90,9 +149,45 @@ class PacmanEnv(gym.Env):
         self.np_random = rd.seed(self._seed)
         self.reward_range = (0, 10)
         self.beQuiet = not render
+        self.num_agents, self.num_food, self.non_wall_positions, self.wall_positions, self.all_edges = self.sample_prep(self.layout)
+        self.maps = []
 
+        for n in range(self.num_maps):
+            layout = sample_layout(self.layout.width, self.layout.height, self.num_agents, self.num_food,
+                          self.non_wall_positions, self.wall_positions, self.all_edges)
+            self.maps.append(layout)
 
         # self.reset()
+    def select_room(self):
+        return random.choice(self.maps)
+    def sample_prep(self, layout):
+        width = layout.width
+        height = layout.height
+        num_food = np.count_nonzero(np.array(layout.food.data) == True)
+        num_agents = len(layout.agentPositions)
+        walls = str(layout.walls).split("\n")
+        non_wall_positions = []
+        wall_positions = []
+        for r in range(height):
+            for c in range(width):
+                if walls[r][c] == 'F':
+                    non_wall_positions.append((r, c))
+                else:
+                    wall_positions.append((r, c))
+
+        def safe_add(s, p1, p2s, width, height):
+            p1r, p1c = p1
+            for p2 in p2s:
+                p2r, p2c = p2
+                if 0 <= p1r < height and 0 <= p2r < height and 0 <= p1c < width and 0 <= p2c < width:
+                    s.add((p1, p2))
+
+        edges = set()
+        for r in range(height):
+            for c in range(width):
+                safe_add(edges, (r, c), [(r + 1, c), (r - 1, c), (r, c + 1), (r, c - 1)], width, height)
+
+        return num_agents, num_food, non_wall_positions, wall_positions, edges
 
     def step(self, action, observation_mode="human"):
         """
@@ -131,24 +226,27 @@ class PacmanEnv(gym.Env):
         # perform "doAction" for the pacman
         self.game.agents[agentIndex].doAction(self.game.state, action)
         self.game.take_action(agentIndex, action)
-        # self.render()
-        done = self.game.gameOver or self._check_if_maxsteps()
-
-
+        self.render()
         reward = self.game.state.data.scoreChange
 
-        # if self.game.gameOver:
-        #     eps_info = {"last_r": reward}
-        # else:
-        #     eps_info = dict()
-        # move the ghosts
+        ## #############################
+        ## move the ghosts
         # if not self.game.gameOver:
         #     for agentIndex in range(1, len(self.game.agents)):
         #         state = self.game.get_observation(agentIndex)
         #         action = self.game.calculate_action(agentIndex, state)
-        #         self.game.take_action(agentIndex, action)
+        #         self.game.take_action(agentIndex, acti
         #         self.render()
         #         reward += self.game.state.data.scoreChange
+        #         if self.game.gameOver:
+        #             break
+        ##############################
+
+
+        # self.render()
+        done = self.game.gameOver or self._check_if_maxsteps()
+
+
         info = dict()
         if done:
             info["maxsteps_used"] = self._check_if_maxsteps()
@@ -163,14 +261,17 @@ class PacmanEnv(gym.Env):
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay
+
             self.gameDisplay = textDisplay.NullGraphics()
             self.rules.quiet = True
         else:
             self.gameDisplay = self.display
             self.rules.quiet = False
+            # self.display.initialize()
 
+        sampled_layout = self.select_room()
         self.game = self.rules.newGame(
-            self.layout,
+            sampled_layout,
             self.pacman,
             self.ghosts,
             self.gameDisplay,
@@ -212,3 +313,5 @@ ACTION_LOOKUP = {
     3: 'left',
     4: 'right',
 }
+
+
