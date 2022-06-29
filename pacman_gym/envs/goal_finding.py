@@ -7,6 +7,8 @@ from .pacman.layout import Layout
 import random as rd
 import networkx as nx
 import random
+import math
+from skimage.measure import block_reduce
 
 def sample_layout(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges):
     layout_text = sample_l(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges)
@@ -69,7 +71,7 @@ class GoalFindingEnv(gym.Env):
 
     def __init__(
         self, layout, seed, reward_goal, reward_crash, reward_food, reward_time,
-            render, max_steps, num_maps, render_mode
+            render, max_steps, num_maps, render_mode, height, width, downsampling_size
     ):
         """"""
         input_args = [
@@ -126,6 +128,7 @@ class GoalFindingEnv(gym.Env):
             self.reward_food,
             self.reward_time,
         )
+        self.height, self.width, self.downsampling_size = height, width, downsampling_size
 
         ######
 
@@ -147,11 +150,12 @@ class GoalFindingEnv(gym.Env):
                 )
             )
         else:
+            reduced_dim = math.ceil(self.height / self.downsampling_size)
             self.observation_space = Box(
                 low=0,
                 high=1,
                 shape=(
-                    240, 240
+                    reduced_dim, reduced_dim
                 )
             )
         self.action_space = Discrete(5) # default datatype is np.int64
@@ -294,11 +298,19 @@ class GoalFindingEnv(gym.Env):
         self.game.start_game()
         return self.render(self.render_mode)
 
+    def downsampling(self, x):
+        dz = block_reduce(x, block_size=(self.downsampling_size, self.downsampling_size), func=np.mean)
+        # dz = th.tensor(dz)
+        # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
+        # plt.show()
+        return dz
 
     def render(self, mode="human", close=False):
-        return self.game.compose_img(mode) # calls the fast renderer
-        # return self.game.render(mode)
-
+        img =  self.game.compose_img(mode) # calls the fast renderer
+        if mode == "gray":
+            return self.downsampling(img)
+        else:
+            return img
     # def my_render(self):
     #     return self.game.my_render(grid_size=self.grid_size)
 

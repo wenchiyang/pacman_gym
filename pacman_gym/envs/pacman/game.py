@@ -28,6 +28,7 @@ import cv2
 
 import numpy as np
 
+
 # grey scale
 WALL_COLOR = 0.25
 GHOST_COLOR = 0.5
@@ -1094,6 +1095,8 @@ class Game:
         rotated_image = np.swapaxes(image,0,1)
         rotated_image = np.flip(rotated_image,axis=0).copy()
         return rotated_image
+
+
 
     def compose_img(self, mode):
         if mode == "tinygrid":
