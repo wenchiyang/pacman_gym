@@ -65,10 +65,11 @@ def generate_layout_text(width, height, pacman_position, ghost_positions, food_p
 
 
 class GoalFindingEnv(gym.Env):
-    metadata = {"render.modes": ["human"]}
+    metadata = {"render.modes": ["human", "tinygrid", "gray"]}
 
     def __init__(
-        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time, render, max_steps, num_maps
+        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time,
+            render, max_steps, num_maps, render_mode
     ):
         """"""
         input_args = [
@@ -84,6 +85,7 @@ class GoalFindingEnv(gym.Env):
                 str(reward_time)
             ]
         self.render_or_not = render
+        self.render_mode = render_mode
         if not render:
             input_args.append("--quietTextGraphics")
 
@@ -135,15 +137,23 @@ class GoalFindingEnv(gym.Env):
         import __main__
 
         __main__.__dict__["_display"] = self.display
-
-        self.observation_space = Box(
-            low=0,
-            high=1,
-            shape=(
-                self.grid_height * self.grid_size,
-                self.grid_weight * self.grid_size
+        if self.render_mode == "tinygrid":
+            self.observation_space = Box(
+                low=0,
+                high=1,
+                shape=(
+                    self.grid_height * self.grid_size,
+                    self.grid_weight * self.grid_size
+                )
             )
-        )
+        else:
+            self.observation_space = Box(
+                low=0,
+                high=1,
+                shape=(
+                    240, 240
+                )
+            )
         self.action_space = Discrete(5) # default datatype is np.int64
         self.action_size = 5
         self.np_random = rd.seed(self._seed)
@@ -160,6 +170,7 @@ class GoalFindingEnv(gym.Env):
         # self.reset()
     def select_room(self):
         return random.choice(self.maps)
+
     def sample_prep(self, layout):
         width = layout.width
         height = layout.height
@@ -226,7 +237,7 @@ class GoalFindingEnv(gym.Env):
         # perform "doAction" for the pacman
         self.game.agents[agentIndex].doAction(self.game.state, action)
         self.game.take_action(agentIndex, action)
-        self.render()
+        # self.render()
         reward = self.game.state.data.scoreChange
 
         ## #############################
@@ -253,7 +264,7 @@ class GoalFindingEnv(gym.Env):
             info["is_success"] = self.game.state.isWin()
 
         # return self.game.state, reward, self.game.gameOver, dict()
-        return self.my_render(), reward, done, info
+        return self.render(self.render_mode), reward, done, info
 
     def reset(self, observation_mode="human"):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
@@ -281,14 +292,15 @@ class GoalFindingEnv(gym.Env):
             self.symY,
         )
         self.game.start_game()
+        return self.render(self.render_mode)
 
-        return self.my_render()
 
     def render(self, mode="human", close=False):
-        self.game.render()
+        return self.game.compose_img(mode) # calls the fast renderer
+        # return self.game.render(mode)
 
-    def my_render(self):
-        return self.game.my_render(grid_size=self.grid_size)
+    # def my_render(self):
+    #     return self.game.my_render(grid_size=self.grid_size)
 
     def get_legal_actions(self, agentIndex):
         return self.game.state.getLegalActions(agentIndex)

@@ -24,7 +24,7 @@ from .util import *
 import time, os
 import traceback
 import sys
-
+import cv2
 
 import numpy as np
 
@@ -647,6 +647,17 @@ class Game:
         self.agentTimeout = False
         import io
         self.agentOutput = [io.StringIO() for agent in agents]
+        folder = os.path.dirname(os.path.realpath(__file__))
+
+        from skimage import io
+        background_path = os.path.join(folder, "imgs", "background.jpeg")
+        self.background = io.imread(background_path)
+        fire_path = os.path.join(folder, "imgs", "fire.jpeg")
+        self.fire = io.imread(fire_path)
+        agent_path = os.path.join(folder, "imgs", "agent.jpeg")
+        self.agent = io.imread(agent_path)
+        star_path = os.path.join(folder, "imgs", "star.jpeg")
+        self.star = io.imread(star_path)
 
     def getProgress(self):
         if self.gameOver:
@@ -857,6 +868,21 @@ class Game:
                     return
         self.display.finish()
 
+    def memorize_object_positions(self):
+        # Food position
+        food_tensor = np.array(self.state.data.food.data)
+        x, y = food_tensor.nonzero() # Assuming there is only one food
+        self.food_pos = (int(6 - y), int(x))
+        # Agent position
+        x, y = self.state.data.agentStates[0].configuration.pos
+        self.agent_pos = (6 - y, x)
+        # Fire positions
+        self.fire_pos = []
+        for agent in self.state.data.agentStates[1:]:
+            x, y = agent.configuration.pos
+            self.fire_pos.append((6 - y, x))
+
+
     def start_game(self):
         """for wrapper
         part one of self.run():
@@ -906,6 +932,9 @@ class Game:
                 self.unmute()
         # self.agentIndex = self.startingIndex
         # numAgents = len(self.agents)
+        self.memorize_object_positions()
+
+
 
     def get_observation(self, agentIndex):
         # Fetch the next agent
@@ -1028,12 +1057,11 @@ class Game:
         if _BOINC_ENABLED:
             boinc.set_fraction_done(self.getProgress())
 
-    def my_render(self, grid_size):
+    def _render_tinygrid(self, grid_size=1):
         newState = self.state.data
         # initialize image
         grid_height = int(newState.layout.height)
         grid_width = int(newState.layout.width)
-
 
         # initialize the image
         # set all background to black
@@ -1067,12 +1095,90 @@ class Game:
         rotated_image = np.flip(rotated_image,axis=0).copy()
         return rotated_image
 
-    def render(self):
-        # Change the display
-        self.display.update(self.state.data)
-        ###idx = agentIndex - agentIndex % 2 + 1
-        ###self.display.update( self.state.makeObservation(idx).data )
-        
+    def compose_img(self, mode):
+        if mode == "tinygrid":
+            return self._render_tinygrid()
+
+        canvas = self.background.copy()
+        for r,c in self.fire_pos:
+            canvas[16 + r * 30:16 + (r + 1) * 30, 16 + c * 30:16 + (c + 1) * 30, :] = self.fire
+
+        canvas[16 + self.food_pos[0] * 30:16 + (self.food_pos[0] + 1) * 30, 16 + self.food_pos[1] * 30:16 + (self.food_pos[1] + 1) * 30, :] = self.star
+        canvas[16 + self.agent_pos[0] * 30:16 + (self.agent_pos[0] + 1) * 30, 16 + self.agent_pos[1] * 30:16 + (self.agent_pos[1] + 1) * 30, :] = self.agent
+        # import matplotlib.pyplot as plt
+        # plt.imshow(canvas)
+        # plt.show()
+        if mode == "human":
+            return canvas
+        elif mode == "gray":
+            gray = self.rgb2gray(canvas)
+            return gray
+
+    def render(self, mode):
+        """
+        This is the default renderer
+        """
+        if mode == "human":
+            # Change the display
+            self.display.update(self.state.data)
+            return self._render_rgb()[:240, :240]
+        elif mode == "tinygrid":
+            return self._render_tinygrid()
+        elif mode == "gray":
+            self.display.update(self.state.data)
+            return self._render_gray()[:240, :240]
+
+    # def render(self, mode):
+    #     if mode == "human":
+    #         # Change the display
+    #         self.display.update(self.state.data)
+    #         return self._render_rgb()[:240, :240]
+    #     elif mode == "tinygrid":
+    #         return self._render_tinygrid()
+    #     elif mode == "gray":
+    #         self.display.update(self.state.data)
+    #         return self._render_gray()[:240, :240]
+
+    # def save_rgb(self, imagepath, colormode='color'):
+    #     self.display.save_image(imagepath,colormode)
+
+    def _render_rgb(self):
+        return self.display.get_image()
+
+    def _render_gray(self):
+        rgb = self.display.get_image()
+        gray = self.rgb2gray(rgb)
+        return gray
+
+    @staticmethod
+    def rgb2gray(rgb, norm=True):
+        # rgb image -> gray [-1, 1]
+        gray = np.dot(rgb[..., :], [0.299, 0.587, 0.114])
+        if norm:
+            gray = gray / 128. - 1.
+        return gray.astype(np.float32)
+
+    # def render_rgb(self):
+    #     img = self.display.get_image()
+    #     # img_np = np.array(img)
+    #     # transposed_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
+    #     transposed_img = np.transpose(img, (1, 0, 2))
+    #     transposed_img = transposed_img[:transposed_img.shape[1], :, :].astype('uint8')
+    #     return transposed_img
+
+    @staticmethod
+    def rgb2gray(rgb, norm=True):
+        # rgb image -> gray [-1, 1]
+        gray = np.dot(rgb[..., :], [0.299, 0.587, 0.114])
+        if norm:
+            gray = gray / 128. - 1.
+        return gray
+
+    def render_grayscale(self):
+        img = self.render_rgb()
+        grayscale_img = self.rgb2gray(img)
+        return grayscale_img
+
     def end_game(self):
         # inform a learning agent of the game result
         for agentIndex, agent in enumerate(self.agents):

@@ -20,6 +20,9 @@ import time
 import types
 import tkinter
 
+import numpy as np
+from PIL import ImageGrab, Image
+import io
 
 _Windows = sys.platform == 'win32'  # True if on Win95/98/NT
 
@@ -382,39 +385,44 @@ def writePostscript(filename):
     psfile.close()
 
 
+# def save_canvas_image(imagepath, colormode='color'):
+#     ps = _canvas.postscript(colormode=colormode)
+#     im = Image.open(io.BytesIO(ps.encode('utf-8')))
+#     im.save(imagepath)
+
+def get_rgb_array(colormode='color'):
+    ps = _canvas.postscript(colormode=colormode)
+    im = Image.open(io.BytesIO(ps.encode('utf-8')))
+    im = np.array(im)
+    im = im[1:274,1:241, :]
+    return im
+
 ##### Get RGB from canvas. Source :https://stackoverflow.com/questions/28014347/get-pixel-colors-of-tkinter-canvas #####
-import numpy as np
+# def get_rgb_array():
+#     def get_pixel_color(canvas, x, y):
+#         ids = canvas.find_overlapping(x, y, x, y)
+#
+#         if len(ids) > 0:
+#             index = ids[-1]
+#             color = canvas.itemcget(index, "fill")
+#             color = color.upper()
+#             if color != '':
+#                 # conver hex to rgb
+#                 return tuple(int(color.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4))
+#         return "WHITE"
+#     width = int(_canvas["width"])
+#     height = int(_canvas["height"])
+#     colors = []
+#
+#     for x in range(width):
+#         column = []
+#         for y in range(height):
+#             column.append(get_pixel_color(_canvas, x, y))
+#         colors.append(column)
+#
+#     return np.array(colors)
 
-def get_rgb_array():
-    return get_pixels_of(_canvas)
 
-def get_pixels_of(canvas):
-    width = int(canvas["width"])
-    height = int(canvas["height"])
-    colors = []
-
-    for x in range(width):
-        column = []
-        for y in range(height):
-            column.append(get_pixel_color(canvas, x, y))
-        colors.append(column)
-
-
-    return np.array(colors)
-
-def get_pixel_color(canvas, x, y):
-    ids = canvas.find_overlapping(x, y, x, y)
-
-    if len(ids) > 0:
-        index = ids[-1]
-        color = canvas.itemcget(index, "fill")
-        color = color.upper()
-        if color != '':
-            # conver hex to rgb
-            return tuple(int(color.lstrip('#')[i:i + 2], 16) for i in (0, 2, 4))
-            # return Color[color.upper()]
-
-    return "WHITE"
 
 ghost_shape = [
     (0, - 0.5),

@@ -41,6 +41,12 @@ GHOST_COLORS.append(formatColor(.1,.75,.7)) # Green
 GHOST_COLORS.append(formatColor(1.0,0.6,0.0)) # Yellow
 GHOST_COLORS.append(formatColor(.4,0.13,0.91)) # Purple
 
+FIRE_COLORS = []
+FIRE_COLORS.append(formatColor(.98,.41,.07)) # Orange
+
+STAR_COLORS = []
+STAR_COLORS.append(formatColor(.1,.75,.7)) # Green
+
 TEAM_COLORS = GHOST_COLORS[:2]
 
 GHOST_SHAPE = [
@@ -56,6 +62,57 @@ GHOST_SHAPE = [
     (-0.5,  0.3 ),
     (-0.25, 0.75 )
   ]
+FIRE_SHAPE = [(x, -y) for x,y in GHOST_SHAPE]
+
+
+STAR_SHAPE = [
+    (0, 0.4),
+    (0.6, 0.8),
+    (0.3, 0.2),
+    (0.8, 0.2),
+    (0.8, -0.2),
+    (0.2, -0.4),
+    (0, -0.8),
+
+    (-0.2, -0.4),
+    (-0.8, -0.2),
+    (-0.8, 0.2),
+    (-0.3, 0.2),
+    (-0.6, 0.8),
+]
+
+
+
+
+AGENT_SHAPE = [
+    (0, 0.6),
+    (0.2, 0.6),
+    (0.2, 1),
+    (0.4, 1),
+    (0.4, 0.4),
+    (0.2, 0.4),
+    (0.2, 0),
+    (0, 0.6),
+    (0.6, -0.4),
+    (0.4, -0.4),
+    (0.4, -0.2),
+    (0.2, -0.2),
+    (0.2, -0.6),
+
+    (-0.2, -0.6),
+    (-0.2, -0.2),
+    (-0.4, -0.2),
+    (-0.4, -0.4),
+    (-0.6, -0.4),
+    (0, 0.6),
+    (-0.2, 0),
+    (-0.2, 0.4),
+    (-0.4, 0.4),
+    (-0.4, 1),
+    (-0.2, 1),
+    (-0.2, 0.6),
+]
+
 GHOST_SIZE = 0.65
 SCARED_COLOR = formatColor(1,1,1)
 
@@ -207,7 +264,8 @@ class PacmanGraphics:
         self.drawWalls(layout.walls)
         # set all background to black
         self.background = self.drawBackground(state.colorFields)
-        self.food = self.drawFood(layout.food)
+        # self.food = self.drawFood(layout.food)
+        self.food = self.drawStar(layout.food)
         self.capsules = self.drawCapsules(layout.capsules)
         refresh()
 
@@ -215,10 +273,12 @@ class PacmanGraphics:
         self.agentImages = [] # (agentState, image)
         for index, agent in enumerate(state.agentStates):
             if agent.isPacman:
-                image = self.drawPacman(agent, index)
+                # image = self.drawPacman(agent, index)
+                image = self.drawAgent(agent, index)
                 self.agentImages.append( (agent, image) )
             else:
-                image = self.drawGhost(agent, index)
+                # image = self.drawGhost(agent, index)
+                image = self.drawFire(agent, index)
                 self.agentImages.append( (agent, image) )
         refresh()
 
@@ -258,7 +318,8 @@ class PacmanGraphics:
             self.swapImages(agentIndex, agentState)
         prevState, prevImage = self.agentImages[agentIndex]
         if agentState.isPacman:
-            self.animatePacman(agentState, prevState, prevImage)
+            # self.animateAgent(agentState, prevState, prevImage)
+            self.moveAgent(agentState, prevState, prevImage)
         else:
             self.moveGhost(agentState, agentIndex, prevState, prevImage)
         self.agentImages[agentIndex] = (agentState, prevImage)
@@ -273,6 +334,9 @@ class PacmanGraphics:
 
     def get_image(self):
         return get_rgb_array()
+    #
+    # def save_image(self, imagepath, colormode='color'):
+    #     save_canvas_image(imagepath, colormode)
 
 
     def make_window(self, width, height):
@@ -305,6 +369,36 @@ class PacmanGraphics:
                        endpoints = endpoints,
                        width = width)]
 
+    def drawAgent(self, pacman, index):
+        position = self.getPosition(pacman)
+        (screen_x, screen_y) = (self.to_screen(position))
+        endpoints = self.getEndpoints(self.getDirection(pacman))
+
+        width = PACMAN_OUTLINE_WIDTH
+        outlineColor = PACMAN_COLOR
+        fillColor = PACMAN_COLOR
+
+        if self.capture:
+            outlineColor = TEAM_COLORS[index % 2]
+            fillColor = GHOST_COLORS[index]
+            width = PACMAN_CAPTURE_OUTLINE_WIDTH
+
+        out_coords = []
+        for (x, y) in AGENT_SHAPE:
+            out_coords.append(
+                (x * self.gridSize * GHOST_SIZE + screen_x, y * self.gridSize * GHOST_SIZE + screen_y))
+
+        colour = fillColor
+        body = polygon(out_coords, colour, filled=1)
+        # WHITE = formatColor(1.0, 1.0, 1.0)
+        # head = circle((screen_x+self.gridSize*GHOST_SIZE*-0.3, screen_y-self.gridSize*GHOST_SIZE*0.3), self.gridSize*GHOST_SIZE*0.2, WHITE, WHITE)
+
+        ghostImageParts = []
+        # ghostImageParts.append(head)
+        ghostImageParts.append(body)
+
+        return ghostImageParts
+
     def getEndpoints(self, direction, position=(0,0)):
         x, y = position
         pos = x - int(x) + y - int(y)
@@ -328,6 +422,29 @@ class PacmanGraphics:
         moveCircle(image[0], screenPosition, r, endpoints)
         refresh()
 
+
+
+
+    # def animateAgent(self, agent, prevAgent, image):
+    #     if self.frameTime < 0:
+    #         print('Press any key to step forward, "q" to play')
+    #         keys = wait_for_keys()
+    #         if 'q' in keys:
+    #             self.frameTime = 0.1
+    #     if self.frameTime > 0.01 or self.frameTime < 0:
+    #         start = time.time()
+    #         fx, fy = self.getPosition(prevAgent)
+    #         px, py = self.getPosition(agent)
+    #         frames = 4.0
+    #         for i in range(1, int(frames) + 1):
+    #             pos = px * i / frames + fx * (frames - i) / frames, py * i / frames + fy * (frames - i) / frames
+    #             self.moveAgent(pos, self.getDirection(agent), image)
+    #             refresh()
+    #             sleep(abs(self.frameTime) / frames)
+    #     else:
+    #         self.moveAgent(self.getPosition(agent), self.getDirection(agent), image)
+    #     refresh()
+
     def animatePacman(self, pacman, prevPacman, image):
         if self.frameTime < 0:
             print('Press any key to step forward, "q" to play')
@@ -348,11 +465,43 @@ class PacmanGraphics:
             self.movePacman(self.getPosition(pacman), self.getDirection(pacman), image)
         refresh()
 
+    def getFireColor(self):
+        return FIRE_COLORS
+    def getStarColor(self):
+        return STAR_COLORS
     def getGhostColor(self, ghost, ghostIndex):
         if ghost.scaredTimer > 0:
             return SCARED_COLOR
         else:
             return GHOST_COLORS[ghostIndex%6]
+
+    def drawFire(self, fire, agentIndex):
+        pos = self.getPosition(fire)
+        dir = self.getDirection(fire)
+        (screen_x, screen_y) = (self.to_screen(pos))
+        out_coords = []
+        for (x, y) in FIRE_SHAPE:
+            out_coords.append((x * self.gridSize * 0.9 * GHOST_SIZE + screen_x, y * self.gridSize * 0.9 *  GHOST_SIZE + screen_y))
+
+        colour = self.getFireColor()
+        body = polygon(out_coords, colour, filled=1)
+        FLAME = formatColor(179/255, 109/255, 95/255)
+        dx = 0
+        dy = 0.5
+        in_coords = []
+        for (x, y) in FIRE_SHAPE:
+            in_coords.append(
+                ((x+dx) * self.gridSize * GHOST_SIZE * 0.5 + screen_x , (y+dy) * self.gridSize * GHOST_SIZE * 0.5 + screen_y))
+        flame_color = formatColor(232/255, 211/255, 158/255)
+        flame = polygon(in_coords, flame_color, filled=1)
+
+
+
+        ghostImageParts = []
+        ghostImageParts.append(body)
+        ghostImageParts.append(flame)
+
+        return ghostImageParts
 
     def drawGhost(self, ghost, agentIndex):
         pos = self.getPosition(ghost)
@@ -422,6 +571,15 @@ class PacmanGraphics:
             color = GHOST_COLORS[ghostIndex]
         edit(ghostImageParts[0], ('fill', color), ('outline', color))
         self.moveEyes(self.getPosition(ghost), self.getDirection(ghost), ghostImageParts[-4:])
+        refresh()
+
+    def moveAgent(self, ghost, prevGhost, ghostImageParts):
+        old_x, old_y = self.to_screen(self.getPosition(prevGhost))
+        new_x, new_y = self.to_screen(self.getPosition(ghost))
+        delta = new_x - old_x, new_y - old_y
+
+        for ghostImagePart in ghostImageParts:
+            move_by(ghostImagePart, delta)
         refresh()
 
     def getPosition(self, agentState):
@@ -574,6 +732,30 @@ class PacmanGraphics:
         return colorImages
 
 
+    def drawStar(self, foodMatrix ):
+        foodImages = []
+        color = FOOD_COLOR
+        for xNum, x in enumerate(foodMatrix):
+            if self.capture and (xNum * 2) <= foodMatrix.width: color = TEAM_COLORS[0]
+            if self.capture and (xNum * 2) > foodMatrix.width: color = TEAM_COLORS[1]
+            imageRow = []
+            foodImages.append(imageRow)
+            for yNum, cell in enumerate(x):
+                if cell: # There's food here
+                    (screen_x, screen_y) = self.to_screen((xNum, yNum ))
+                    out_coords = []
+                    for (x, y) in STAR_SHAPE:
+                        out_coords.append(
+                            (x * self.gridSize * 0.8 * GHOST_SIZE + screen_x, y * self.gridSize * 0.8 * GHOST_SIZE + screen_y))
+                        colour = self.getStarColor()
+                        dot = polygon(out_coords, colour, filled=1)
+
+
+                    imageRow.append(dot)
+                else:
+                    imageRow.append(None)
+        return foodImages
+
     def drawFood(self, foodMatrix ):
         foodImages = []
         color = FOOD_COLOR
@@ -700,6 +882,7 @@ class FirstPersonPacmanGraphics(PacmanGraphics):
 
     def getGhostColor(self, ghost, ghostIndex):
         return GHOST_COLORS[ghostIndex]
+
 
     def getPosition(self, ghostState):
         if not self.showGhosts and not ghostState.isPacman and ghostState.getPosition()[1] > 1:
