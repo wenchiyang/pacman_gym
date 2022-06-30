@@ -883,6 +883,13 @@ class Game:
             x, y = agent.configuration.pos
             self.fire_pos.append((6 - y, x))
 
+        canvas = self.background.copy()
+        for r, c in self.fire_pos:
+            canvas[16 + r * 30:16 + (r + 1) * 30, 16 + c * 30:16 + (c + 1) * 30, :] = self.fire
+        canvas[16 + self.food_pos[0] * 30:16 + (self.food_pos[0] + 1) * 30,
+        16 + self.food_pos[1] * 30:16 + (self.food_pos[1] + 1) * 30, :] = self.star
+
+        self.background_w_static_objs = canvas
 
     def start_game(self):
         """for wrapper
@@ -1101,17 +1108,12 @@ class Game:
     def compose_img(self, mode):
         if mode == "tinygrid":
             return self._render_tinygrid()
-
-        canvas = self.background.copy()
-        for r,c in self.fire_pos:
-            canvas[16 + r * 30:16 + (r + 1) * 30, 16 + c * 30:16 + (c + 1) * 30, :] = self.fire
-
-        canvas[16 + self.food_pos[0] * 30:16 + (self.food_pos[0] + 1) * 30, 16 + self.food_pos[1] * 30:16 + (self.food_pos[1] + 1) * 30, :] = self.star
+        canvas = self.background_w_static_objs.copy()
         canvas[16 + self.agent_pos[0] * 30:16 + (self.agent_pos[0] + 1) * 30, 16 + self.agent_pos[1] * 30:16 + (self.agent_pos[1] + 1) * 30, :] = self.agent
-        # import matplotlib.pyplot as plt
         # plt.imshow(canvas)
         # plt.show()
         if mode == "human":
+            self.display.update(self.state.data)
             return canvas
         elif mode == "gray":
             gray = self.rgb2gray(canvas)
@@ -1131,16 +1133,6 @@ class Game:
             self.display.update(self.state.data)
             return self._render_gray()[:240, :240]
 
-    # def render(self, mode):
-    #     if mode == "human":
-    #         # Change the display
-    #         self.display.update(self.state.data)
-    #         return self._render_rgb()[:240, :240]
-    #     elif mode == "tinygrid":
-    #         return self._render_tinygrid()
-    #     elif mode == "gray":
-    #         self.display.update(self.state.data)
-    #         return self._render_gray()[:240, :240]
 
     # def save_rgb(self, imagepath, colormode='color'):
     #     self.display.save_image(imagepath,colormode)
