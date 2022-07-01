@@ -1118,6 +1118,8 @@ class Game:
         elif mode == "gray":
             gray = self.rgb2gray(canvas)
             return gray
+        elif mode == "rgb":
+            return canvas
 
     def render(self, mode):
         """
