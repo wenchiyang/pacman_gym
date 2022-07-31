@@ -874,9 +874,6 @@ class Game:
         food_tensor = np.array(self.state.data.food.data)
         x, y = food_tensor.nonzero() # Assuming there is only one food
         self.food_pos = (int(6 - y), int(x))
-        # Agent position
-        x, y = self.state.data.agentStates[0].configuration.pos
-        self.agent_pos = (6 - y, x)
         # Fire positions
         self.fire_pos = []
         for agent in self.state.data.agentStates[1:]:
@@ -1108,8 +1105,14 @@ class Game:
     def compose_img(self, mode):
         if mode == "tinygrid":
             return self._render_tinygrid()
+
+        # Agent position
+        x, y = self.state.data.agentStates[0].getPosition()
+        agent_pos = (6 - y, x)
+
         canvas = self.background_w_static_objs.copy()
-        canvas[16 + self.agent_pos[0] * 30:16 + (self.agent_pos[0] + 1) * 30, 16 + self.agent_pos[1] * 30:16 + (self.agent_pos[1] + 1) * 30, :] = self.agent
+        canvas[16 + agent_pos[0] * 30:16 + (agent_pos[0] + 1) * 30, 16 + agent_pos[1] * 30:16 + (agent_pos[1] + 1) * 30, :] = self.agent
+        # import matplotlib.pyplot as plt
         # plt.imshow(canvas)
         # plt.show()
         if mode == "human":
