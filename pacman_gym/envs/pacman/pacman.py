@@ -310,7 +310,7 @@ class ClassicGameRules:
         self.reward_time = reward_time
 
     def newGame( self, layout, pacmanAgent, ghostAgents, display, quiet=False,
-                 catchExceptions=False, symX=False, symY=False,):
+                 catchExceptions=False, symX=False, symY=False, background=None):
         agents = [pacmanAgent] + ghostAgents[:layout.getNumGhosts()]
         initState = GameState(
             reward_goal=self.reward_goal,
@@ -318,7 +318,7 @@ class ClassicGameRules:
             reward_food=self.reward_food,
             reward_time=self.reward_time)
         initState.initialize( layout, len(ghostAgents))
-        game = Game(agents, display, self, catchExceptions=catchExceptions,symX=symX, symY=symY)
+        game = Game(agents, display, self, catchExceptions=catchExceptions,symX=symX, symY=symY, background=background)
         game.state = initState
         self.initialState = initState.deepCopy()
         self.quiet = quiet

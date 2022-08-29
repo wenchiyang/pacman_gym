@@ -631,7 +631,7 @@ class Game:
     The Game manages the control flow, soliciting actions from agents.
     """
 
-    def __init__( self, agents, display, rules, startingIndex=0, muteAgents=False, catchExceptions=False, symX=False, symY=False):
+    def __init__( self, agents, display, rules, startingIndex=0, muteAgents=False, catchExceptions=False, symX=False, symY=False, background=None):
         self.agentCrashed = False
         self.agents = agents
         self.display = display
@@ -651,7 +651,7 @@ class Game:
         folder = os.path.dirname(os.path.realpath(__file__))
 
         from skimage import io
-        background_path = os.path.join(folder, "imgs", "background.jpeg")
+        background_path = os.path.join(folder, "imgs", background)
         self.background = io.imread(background_path)
         fire_path = os.path.join(folder, "imgs", "fire.jpeg")
         self.fire = io.imread(fire_path)
@@ -871,22 +871,28 @@ class Game:
 
     def memorize_object_positions(self):
         # Food position
+        # self.food_pos = []
         food_tensor = np.array(self.state.data.food.data)
-        x, y = food_tensor.nonzero() # Assuming there is only one food
-        self.food_pos = (int(6 - y), int(x))
+        max_width_or_height = food_tensor.shape[0] - 1
+        # xs, ys = food_tensor.nonzero() # Assuming there is only one food
+        # for x, y in zip(xs, ys):
+        #     self.food_pos.append((int(max_width_or_height - y), int(x)))
         # Fire positions
         self.fire_pos = []
         for agent in self.state.data.agentStates[1:]:
             x, y = agent.configuration.pos
-            self.fire_pos.append((6 - y, x))
+            self.fire_pos.append((max_width_or_height - y, x))
+
 
         canvas = self.background.copy()
         for r, c in self.fire_pos:
             canvas[16 + r * 30:16 + (r + 1) * 30, 16 + c * 30:16 + (c + 1) * 30, :] = self.fire
-        canvas[16 + self.food_pos[0] * 30:16 + (self.food_pos[0] + 1) * 30,
-        16 + self.food_pos[1] * 30:16 + (self.food_pos[1] + 1) * 30, :] = self.star
-
+        # for r, c in self.food_pos:
+        #     canvas[16 + r * 30:16 + (r + 1) * 30,
+        #     16 + c * 30:16 + (c + 1) * 30, :] = self.star
         self.background_w_static_objs = canvas
+
+
 
     def start_game(self):
         """for wrapper
@@ -1106,12 +1112,28 @@ class Game:
         if mode == "tinygrid":
             return self._render_tinygrid()
 
-        # Agent position
+        #TODO keep this
+        # # Agent position
         x, y = self.state.data.agentStates[0].getPosition()
-        agent_pos = (6 - y, x)
+        max_width_or_height = self.state.data.layout.height - 1
+        agent_pos = (max_width_or_height - y, x)
+
+        # Food position
+        self.food_pos = []
+        food_tensor = np.array(self.state.data.food.data)
+        max_width_or_height = food_tensor.shape[0] - 1
+        xs, ys = food_tensor.nonzero() # Assuming there is only one food
+        for x, y in zip(xs, ys):
+            self.food_pos.append((int(max_width_or_height - y), int(x)))
+
+
 
         canvas = self.background_w_static_objs.copy()
         canvas[16 + agent_pos[0] * 30:16 + (agent_pos[0] + 1) * 30, 16 + agent_pos[1] * 30:16 + (agent_pos[1] + 1) * 30, :] = self.agent
+        for r, c in self.food_pos:
+            canvas[16 + r * 30:16 + (r + 1) * 30,
+            16 + c * 30:16 + (c + 1) * 30, :] = self.star
+
         # import matplotlib.pyplot as plt
         # plt.imshow(canvas)
         # plt.show()

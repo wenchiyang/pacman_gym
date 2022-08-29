@@ -71,7 +71,8 @@ class GoalFindingEnv(gym.Env):
 
     def __init__(
         self, layout, seed, reward_goal, reward_crash, reward_food, reward_time,
-            render, max_steps, num_maps, render_mode, height, width, downsampling_size
+            render, max_steps, num_maps, render_mode, height, width, downsampling_size,
+            background
     ):
         """"""
         input_args = [
@@ -114,12 +115,15 @@ class GoalFindingEnv(gym.Env):
         self.symX = args["symX"]
         self.symY = args["symY"]
 
+
         self.reward_goal = args["reward_goal"]
         self.reward_crash = args["reward_crash"]
         self.reward_food = args["reward_food"]
         self.reward_time = args["reward_time"]
         self.max_steps = max_steps
         self.num_maps = num_maps
+        self.background = background
+
 
         self.rules = ClassicGameRules(
             args["timeout"],
@@ -294,6 +298,7 @@ class GoalFindingEnv(gym.Env):
             self.catchExceptions,
             self.symX,
             self.symY,
+            self.background
         )
         self.game.start_game()
         return self.render(self.render_mode)
