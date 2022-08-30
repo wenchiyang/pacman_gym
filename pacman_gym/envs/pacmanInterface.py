@@ -1,31 +1,38 @@
-
 import gym
 from gym.spaces import Box, Discrete
 
 from .pacman.pacman import readCommand, ClassicGameRules
 import numpy as np
+from .pacman.layout import Layout
 import random as rd
+import networkx as nx
+import random
+import math
+from skimage.measure import block_reduce
 
 class PacmanEnv(gym.Env):
-    metadata = {"render.modes": ["human"]}
+    metadata = {"render.modes": ["human", "tinygrid", "gray"]}
 
     def __init__(
-        self, layout, seed, reward_goal, reward_crash, reward_food, reward_time, render, max_steps
+            self, layout, seed, reward_goal, reward_crash, reward_food, reward_time,
+            render, max_steps, num_maps, render_mode, height, width, downsampling_size,
+            background
     ):
         """"""
         input_args = [
-                "--layout",
-                layout,
-                "--reward-goal",
-                str(reward_goal),
-                "--reward-crash",
-                str(reward_crash),
-                "--reward-food",
-                str(reward_food),
-                "--reward-time",
-                str(reward_time)
-            ]
+            "--layout",
+            layout,
+            "--reward-goal",
+            str(reward_goal),
+            "--reward-crash",
+            str(reward_crash),
+            "--reward-food",
+            str(reward_food),
+            "--reward-time",
+            str(reward_time)
+        ]
         self.render_or_not = render
+        self.render_mode = render_mode
         if not render:
             input_args.append("--quietTextGraphics")
 
@@ -52,11 +59,15 @@ class PacmanEnv(gym.Env):
         self.symX = args["symX"]
         self.symY = args["symY"]
 
+
         self.reward_goal = args["reward_goal"]
         self.reward_crash = args["reward_crash"]
         self.reward_food = args["reward_food"]
         self.reward_time = args["reward_time"]
         self.max_steps = max_steps
+        self.num_maps = num_maps
+        self.background = background
+
 
         self.rules = ClassicGameRules(
             args["timeout"],
@@ -65,6 +76,7 @@ class PacmanEnv(gym.Env):
             self.reward_food,
             self.reward_time,
         )
+        self.height, self.width, self.downsampling_size = height, width, downsampling_size
 
         ######
 
@@ -76,23 +88,34 @@ class PacmanEnv(gym.Env):
         import __main__
 
         __main__.__dict__["_display"] = self.display
-
-        self.observation_space = Box(
-            low=0,
-            high=1,
-            shape=(
-                self.grid_height * self.grid_size,
-                self.grid_weight * self.grid_size
+        if self.render_mode == "tinygrid":
+            self.observation_space = Box(
+                low=0,
+                high=1,
+                shape=(
+                    self.grid_height * self.grid_size,
+                    self.grid_weight * self.grid_size
+                )
             )
-        )
+        else:
+            reduced_dim = math.ceil(self.height / self.downsampling_size)
+            self.observation_space = Box(
+                low=0,
+                high=1,
+                shape=(
+                    reduced_dim, reduced_dim
+                )
+            )
         self.action_space = Discrete(5) # default datatype is np.int64
         self.action_size = 5
         self.np_random = rd.seed(self._seed)
         self.reward_range = (0, 10)
         self.beQuiet = not render
+        self.maps = [self.layout]
 
 
-        # self.reset()
+    def select_room(self):
+        return random.choice(self.maps)
 
     def step(self, action, observation_mode="human"):
         """
@@ -132,30 +155,33 @@ class PacmanEnv(gym.Env):
         self.game.agents[agentIndex].doAction(self.game.state, action)
         self.game.take_action(agentIndex, action)
         # self.render()
-        done = self.game.gameOver or self._check_if_maxsteps()
-
-
         reward = self.game.state.data.scoreChange
 
-        # if self.game.gameOver:
-        #     eps_info = {"last_r": reward}
-        # else:
-        #     eps_info = dict()
-        # move the ghosts
+        ## #############################
+        ## move the ghosts
         # if not self.game.gameOver:
         #     for agentIndex in range(1, len(self.game.agents)):
         #         state = self.game.get_observation(agentIndex)
         #         action = self.game.calculate_action(agentIndex, state)
-        #         self.game.take_action(agentIndex, action)
+        #         self.game.take_action(agentIndex, acti
         #         self.render()
         #         reward += self.game.state.data.scoreChange
+        #         if self.game.gameOver:
+        #             break
+        ##############################
+
+
+        # self.render()
+        done = self.game.gameOver or self._check_if_maxsteps()
+
+
         info = dict()
         if done:
             info["maxsteps_used"] = self._check_if_maxsteps()
             info["is_success"] = self.game.state.isWin()
 
         # return self.game.state, reward, self.game.gameOver, dict()
-        return self.my_render(), reward, done, info
+        return self.render(self.render_mode), reward, done, info
 
     def reset(self, observation_mode="human"):
         # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
@@ -163,14 +189,17 @@ class PacmanEnv(gym.Env):
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay
+
             self.gameDisplay = textDisplay.NullGraphics()
             self.rules.quiet = True
         else:
             self.gameDisplay = self.display
             self.rules.quiet = False
+            # self.display.initialize()
 
+        sampled_layout = self.select_room()
         self.game = self.rules.newGame(
-            self.layout,
+            sampled_layout,
             self.pacman,
             self.ghosts,
             self.gameDisplay,
@@ -178,16 +207,26 @@ class PacmanEnv(gym.Env):
             self.catchExceptions,
             self.symX,
             self.symY,
+            self.background
         )
         self.game.start_game()
+        return self.render(self.render_mode)
 
-        return self.my_render()
+    def downsampling(self, x):
+        dz = block_reduce(x, block_size=(self.downsampling_size, self.downsampling_size), func=np.mean)
+        # dz = th.tensor(dz)
+        # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
+        # plt.show()
+        return dz
 
     def render(self, mode="human", close=False):
-        self.game.render()
-
-    def my_render(self):
-        return self.game.my_render(grid_size=self.grid_size)
+        img =  self.game.compose_img(mode) # calls the fast renderer
+        if mode == "gray":
+            return self.downsampling(img)
+        else:
+            return img
+    # def my_render(self):
+    #     return self.game.my_render(grid_size=self.grid_size)
 
     def get_legal_actions(self, agentIndex):
         return self.game.state.getLegalActions(agentIndex)
@@ -212,3 +251,5 @@ ACTION_LOOKUP = {
     3: 'left',
     4: 'right',
 }
+
+
