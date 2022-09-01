@@ -10,8 +10,15 @@ import random
 import math
 from skimage.measure import block_reduce
 
-def sample_layout(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges):
-    layout_text = sample_l(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges)
+def sample_layout(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges, check_valid=True):
+    if check_valid:
+        layout_text = sample_l(width, height, num_agents, num_food, non_wall_positions, wall_positions, all_edges)
+    else:
+        positions = rd.sample(non_wall_positions, num_agents + num_food)
+        pacman_position = positions[0]
+        ghost_positions = positions[1:num_agents]
+        food_positions = positions[num_agents:]
+        layout_text = generate_layout_text(width, height, pacman_position, ghost_positions, food_positions, wall_positions)
     new_layout = Layout(layout_text.split('\n'))
     return new_layout
 
