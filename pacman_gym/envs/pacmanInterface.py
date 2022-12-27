@@ -16,7 +16,7 @@ class PacmanEnv(gym.Env):
     def __init__(
             self, layout, seed, reward_goal, reward_crash, reward_food, reward_time,
             render, max_steps, num_maps, render_mode, height, width, downsampling_size,
-            background
+            background, move_ghosts=False
     ):
         """"""
         input_args = [
@@ -67,6 +67,7 @@ class PacmanEnv(gym.Env):
         self.max_steps = max_steps
         self.num_maps = num_maps
         self.background = background
+        self.move_ghosts = move_ghosts
 
 
         self.rules = ClassicGameRules(
@@ -154,20 +155,21 @@ class PacmanEnv(gym.Env):
         # perform "doAction" for the pacman
         self.game.agents[agentIndex].doAction(self.game.state, action)
         self.game.take_action(agentIndex, action)
-        # self.render()
+        self.render()
         reward = self.game.state.data.scoreChange
 
         ## #############################
         ## move the ghosts
-        # if not self.game.gameOver:
-        #     for agentIndex in range(1, len(self.game.agents)):
-        #         state = self.game.get_observation(agentIndex)
-        #         action = self.game.calculate_action(agentIndex, state)
-        #         self.game.take_action(agentIndex, acti
-        #         self.render()
-        #         reward += self.game.state.data.scoreChange
-        #         if self.game.gameOver:
-        #             break
+        if self.move_ghosts:
+            if not self.game.gameOver:
+                for agentIndex in range(1, len(self.game.agents)):
+                    state = self.game.get_observation(agentIndex)
+                    action = self.game.calculate_action(agentIndex, state)
+                    self.game.take_action(agentIndex, action)
+                    self.render()
+                    reward += self.game.state.data.scoreChange
+                    if self.game.gameOver:
+                        break
         ##############################
 
 

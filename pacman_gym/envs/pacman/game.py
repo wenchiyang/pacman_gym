@@ -869,28 +869,13 @@ class Game:
                     return
         self.display.finish()
 
-    def memorize_object_positions(self):
-        # Food position
-        # self.food_pos = []
-        food_tensor = np.array(self.state.data.food.data)
-        max_width_or_height = food_tensor.shape[0] - 1
-        # xs, ys = food_tensor.nonzero() # Assuming there is only one food
-        # for x, y in zip(xs, ys):
-        #     self.food_pos.append((int(max_width_or_height - y), int(x)))
-        # Fire positions
-        self.fire_pos = []
-        for agent in self.state.data.agentStates[1:]:
-            x, y = agent.configuration.pos
-            self.fire_pos.append((max_width_or_height - y, x))
-
-
-        canvas = self.background.copy()
-        for r, c in self.fire_pos:
-            canvas[16 + r * 30:16 + (r + 1) * 30, 16 + c * 30:16 + (c + 1) * 30, :] = self.fire
-        # for r, c in self.food_pos:
-        #     canvas[16 + r * 30:16 + (r + 1) * 30,
-        #     16 + c * 30:16 + (c + 1) * 30, :] = self.star
-        self.background_w_static_objs = canvas
+    # def memorize_object_positions(self):
+    #
+    #
+    #     canvas = self.background.copy()
+    #
+    #
+    #     self.background_w_static_objs = canvas
 
 
 
@@ -943,7 +928,7 @@ class Game:
                 self.unmute()
         # self.agentIndex = self.startingIndex
         # numAgents = len(self.agents)
-        self.memorize_object_positions()
+        # self.memorize_object_positions()
 
 
 
@@ -1130,13 +1115,23 @@ class Game:
         for x, y in zip(xs, ys):
             self.food_pos.append((int(max_width_or_height - y), int(x)))
 
+        # Fire positions
+        self.fire_pos = []
+        for agent in self.state.data.agentStates[1:]:
+            x, y = agent.configuration.pos
+            self.fire_pos.append((max_width_or_height - y, x))
 
 
-        canvas = self.background_w_static_objs.copy()
-        canvas[16 + agent_pos[0] * 30:16 + (agent_pos[0] + 1) * 30, 16 + agent_pos[1] * 30:16 + (agent_pos[1] + 1) * 30, :] = self.agent
+        canvas = self.background.copy()
         for r, c in self.food_pos:
             canvas[16 + r * 30:16 + (r + 1) * 30,
             16 + c * 30:16 + (c + 1) * 30, :] = self.star
+
+        for r, c in self.fire_pos:
+            r, c = int(r), int(c)
+            canvas[16 + r * 30:16 + (r + 1) * 30, 16 + c * 30:16 + (c + 1) * 30, :] = self.fire
+
+        canvas[16 + agent_pos[0] * 30:16 + (agent_pos[0] + 1) * 30, 16 + agent_pos[1] * 30:16 + (agent_pos[1] + 1) * 30, :] = self.agent
 
         # import matplotlib.pyplot as plt
         # plt.imshow(canvas)

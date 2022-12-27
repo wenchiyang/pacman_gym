@@ -320,7 +320,8 @@ class PacmanGraphics:
             # self.animateAgent(agentState, prevState, prevImage)
             self.moveAgent(agentState, prevState, prevImage)
         else:
-            self.moveGhost(agentState, agentIndex, prevState, prevImage)
+            # self.moveGhost(agentState, agentIndex, prevState, prevImage)
+            self.moveAgent(agentState, prevState, prevImage)
         self.agentImages[agentIndex] = (agentState, prevImage)
 
 
