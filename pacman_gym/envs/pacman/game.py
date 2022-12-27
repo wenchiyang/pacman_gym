@@ -1091,16 +1091,20 @@ class Game:
                 if newState.layout.walls[w][h]:
                     image[w * grid_size:(w + 1) * grid_size, h * grid_size:(h + 1) * grid_size] = WALL_COLOR
 
-        # draw agents
+        # draw fires
         for agentIndex, agentState in enumerate(newState.agentStates):
             agent_x = int(agentState.configuration.pos[0])
             agent_y = int(agentState.configuration.pos[1])
-            if agentIndex == 0:
-                image[agent_x * grid_size:(agent_x + 1) * grid_size,
-                agent_y * grid_size:(agent_y + 1) * grid_size] = PACMAN_COLOR
-            else:
+            if agentIndex != 0:
                 image[agent_x * grid_size:(agent_x + 1) * grid_size,
                 agent_y * grid_size:(agent_y + 1) * grid_size] = GHOST_COLOR
+
+        # draw the learning agent
+        agentState = newState.agentStates[0]
+        agent_x = int(agentState.configuration.pos[0])
+        agent_y = int(agentState.configuration.pos[1])
+        image[agent_x * grid_size:(agent_x + 1) * grid_size,
+        agent_y * grid_size:(agent_y + 1) * grid_size] = PACMAN_COLOR
 
         rotated_image = np.swapaxes(image,0,1)
         rotated_image = np.flip(rotated_image,axis=0).copy()

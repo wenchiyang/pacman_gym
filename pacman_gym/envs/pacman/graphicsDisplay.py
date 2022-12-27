@@ -125,7 +125,7 @@ PACMAN_SCALE = 0.5
 # Food
 FOOD_COLOR = formatColor(1,1,1)
 FOOD_SIZE = 0.1
-
+FOOD_SIZE = 0.65
 # Laser
 LASER_COLOR = formatColor(1,0,0)
 LASER_SIZE = 0.02
@@ -313,7 +313,6 @@ class PacmanGraphics:
         #draw colorFields
         self.background = self.drawBackground(newState.colorFields)
 
-
         if self.agentImages[agentIndex][0].isPacman != agentState.isPacman:
             self.swapImages(agentIndex, agentState)
         prevState, prevImage = self.agentImages[agentIndex]
@@ -324,13 +323,17 @@ class PacmanGraphics:
             self.moveGhost(agentState, agentIndex, prevState, prevImage)
         self.agentImages[agentIndex] = (agentState, prevImage)
 
+
         if newState._foodEaten != None:
             self.removeFood(newState._foodEaten, self.food)
+            refresh()
         if newState._capsuleEaten != None:
             self.removeCapsule(newState._capsuleEaten, self.capsules)
         self.infoPane.updateScore(newState.score)
         if 'ghostDistances' in dir(newState):
             self.infoPane.updateGhostDistances(newState.ghostDistances)
+
+
 
     def get_image(self):
         return get_rgb_array()
@@ -747,10 +750,8 @@ class PacmanGraphics:
                     for (x, y) in STAR_SHAPE:
                         out_coords.append(
                             (x * self.gridSize * 0.8 * GHOST_SIZE + screen_x, y * self.gridSize * 0.8 * GHOST_SIZE + screen_y))
-                        colour = self.getStarColor()
-                        dot = polygon(out_coords, colour, filled=1)
-
-
+                    colour = self.getStarColor()
+                    dot = polygon(out_coords, colour, filled=1)
                     imageRow.append(dot)
                 else:
                     imageRow.append(None)

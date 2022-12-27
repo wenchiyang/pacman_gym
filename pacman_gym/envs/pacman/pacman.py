@@ -291,6 +291,7 @@ class GameState:
 
 SCARED_TIME = 40    # Moves ghosts are scared
 COLLISION_TOLERANCE = 0.7 # How close ghosts must be to Pacman to kill
+# COLLISION_TOLERANCE = -1.0 # How close ghosts must be to Pacman to kill
 # REWARD_TIME = 0 # Number of points lost each round
 REWARD_GOAL = 0
 REWARD_CRASH = 0
