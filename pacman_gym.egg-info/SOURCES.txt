@@ -1,7 +1,0 @@
-README.md
-setup.py
-pacman_gym.egg-info/PKG-INFO
-pacman_gym.egg-info/SOURCES.txt
-pacman_gym.egg-info/dependency_links.txt
-pacman_gym.egg-info/requires.txt
-pacman_gym.egg-info/top_level.txt
