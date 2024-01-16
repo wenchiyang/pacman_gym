@@ -631,7 +631,7 @@ class Game:
     The Game manages the control flow, soliciting actions from agents.
     """
 
-    def __init__( self, agents, display, rules, startingIndex=0, muteAgents=False, catchExceptions=False, symX=False, symY=False, background=None):
+    def __init__(self, agents, display, rules, startingIndex=0, muteAgents=False, catchExceptions=False, symX=False, symY=False, background_filename=None):
         self.agentCrashed = False
         self.agents = agents
         self.display = display
@@ -651,7 +651,7 @@ class Game:
         folder = os.path.dirname(os.path.realpath(__file__))
 
         from skimage import io
-        background_path = os.path.join(folder, "imgs", background)
+        background_path = os.path.join(folder, "imgs", background_filename)
         self.background = io.imread(background_path)
         fire_path = os.path.join(folder, "imgs", "fire.jpeg")
         self.fire = io.imread(fire_path)
@@ -869,14 +869,6 @@ class Game:
                     return
         self.display.finish()
 
-    # def memorize_object_positions(self):
-    #
-    #
-    #     canvas = self.background.copy()
-    #
-    #
-    #     self.background_w_static_objs = canvas
-
 
 
     def start_game(self):
@@ -884,10 +876,6 @@ class Game:
         part one of self.run():
         """
         self.display.initialize(self.state.data)
-        # try:
-        #     render
-        # except:
-        #
         self.numMoves = 0
 
         ###self.display.initialize(self.state.makeObservation(1).data)
@@ -1101,8 +1089,6 @@ class Game:
         if mode == "tinygrid":
             return self._render_tinygrid()
 
-        #TODO keep this
-        # # Agent position
         x, y = self.state.data.agentStates[0].getPosition()
         max_width_or_height = self.state.data.layout.height - 1
         agent_pos = (max_width_or_height - y, x)
@@ -1133,13 +1119,13 @@ class Game:
 
         canvas[16 + agent_pos[0] * 30:16 + (agent_pos[0] + 1) * 30, 16 + agent_pos[1] * 30:16 + (agent_pos[1] + 1) * 30, :] = self.agent
 
-        # import matplotlib.pyplot as plt
-        # plt.imshow(canvas)
-        # plt.show()
         if mode == "human":
             self.display.update(self.state.data)
             return canvas
         elif mode == "gray":
+            gray = self.rgb2gray(canvas)
+            return gray
+        elif mode == "dict":
             gray = self.rgb2gray(canvas)
             return gray
         elif mode == "rgb":
@@ -1150,18 +1136,8 @@ class Game:
         This is the default renderer
         """
         if mode == "human":
-            # Change the display
+            # Update the display
             self.display.update(self.state.data)
-            return self._render_rgb()[:240, :240]
-        elif mode == "tinygrid":
-            return self._render_tinygrid()
-        elif mode == "gray":
-            self.display.update(self.state.data)
-            return self._render_gray()[:240, :240]
-
-
-    # def save_rgb(self, imagepath, colormode='color'):
-    #     self.display.save_image(imagepath,colormode)
 
     def _render_rgb(self):
         return self.display.get_image()
@@ -1179,13 +1155,6 @@ class Game:
             gray = gray / 128. - 1.
         return gray.astype(np.float32)
 
-    # def render_rgb(self):
-    #     img = self.display.get_image()
-    #     # img_np = np.array(img)
-    #     # transposed_img = cv2.cvtColor(img_np, cv2.COLOR_BGR2RGB)
-    #     transposed_img = np.transpose(img, (1, 0, 2))
-    #     transposed_img = transposed_img[:transposed_img.shape[1], :, :].astype('uint8')
-    #     return transposed_img
 
     @staticmethod
     def rgb2gray(rgb, norm=True):

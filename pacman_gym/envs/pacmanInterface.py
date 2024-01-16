@@ -1,5 +1,8 @@
+"""
+"""
+
 import gym
-from gym.spaces import Box, Discrete
+from gym.spaces import Box, Discrete, Dict
 
 from .pacman.pacman import readCommand, ClassicGameRules
 import numpy as np
@@ -11,14 +14,24 @@ import math
 from skimage.measure import block_reduce
 
 class PacmanEnv(gym.Env):
-    metadata = {"render.modes": ["human", "tinygrid", "gray"]}
+    metadata = {"render.modes": ["human", "tinygrid", "gray", "dict"]}
 
     def __init__(
-            self, layout, seed, reward_goal, reward_crash, reward_food, reward_time,
-            render, max_steps, num_maps, render_mode, height, width, downsampling_size,
-            background, move_ghosts=False
+            self, seed, render_or_not, render_mode, move_ghosts=False, stochasticity=0.0
     ):
         """"""
+        layout = "small4"
+        reward_goal = 10
+        reward_crash = 0
+        reward_food = 1
+        reward_time = -0.1
+        downsampling_size = 8
+        height, width = 482, 482
+        num_maps = 1
+        max_steps = 200
+        self.beQuiet = not render_or_not
+        self.render_or_not = render_or_not
+
         input_args = [
             "--layout",
             layout,
@@ -31,9 +44,9 @@ class PacmanEnv(gym.Env):
             "--reward-time",
             str(reward_time)
         ]
-        self.render_or_not = render
+
         self.render_mode = render_mode
-        if not render:
+        if self.beQuiet:
             input_args.append("--quietTextGraphics")
 
         args = readCommand(input_args)
@@ -66,8 +79,14 @@ class PacmanEnv(gym.Env):
         self.reward_time = args["reward_time"]
         self.max_steps = max_steps
         self.num_maps = num_maps
-        self.background = background
+
+        layout_backgrounds = {
+            "small4": "bg_small.jpg"
+        }
+        self.background_filename = layout_backgrounds[layout]
+
         self.move_ghosts = move_ghosts
+        self.stochasticity = stochasticity
 
 
         self.rules = ClassicGameRules(
@@ -98,7 +117,7 @@ class PacmanEnv(gym.Env):
                     self.grid_weight * self.grid_size
                 )
             )
-        else:
+        elif self.render_mode == "gray":
             reduced_dim = math.ceil(self.height / self.downsampling_size)
             self.observation_space = Box(
                 low=0,
@@ -107,11 +126,29 @@ class PacmanEnv(gym.Env):
                     reduced_dim, reduced_dim
                 )
             )
+        elif self.render_mode == "dict":
+            reduced_dim = math.ceil(self.height / self.downsampling_size)
+            self.observation_space = Dict({
+                "gray": Box(
+                    low=0,
+                    high=1,
+                    shape=(
+                        reduced_dim, reduced_dim
+                    )),
+                "tinygrid": Box(
+                    low=0,
+                    high=1,
+                    shape=(
+                        self.grid_height * self.grid_size,
+                        self.grid_weight * self.grid_size
+                    )
+                )
+            })
+
         self.action_space = Discrete(5) # default datatype is np.int64
         self.action_size = 5
         self.np_random = rd.seed(self._seed)
         self.reward_range = (0, 10)
-        self.beQuiet = not render
         self.maps = [self.layout]
 
 
@@ -147,6 +184,15 @@ class PacmanEnv(gym.Env):
         """
         agentIndex = 0
 
+        rdm = random.random()
+        if rdm >= 2*self.stochasticity:
+            action = [0, 1, 2, 3, 4][action]
+        elif rdm >= self.stochasticity:
+            action = [0, 3, 3, 1, 1][action]
+        else:
+            action = [0, 4, 4, 2, 2][action]
+
+
         if isinstance(action, np.int64) or isinstance(action, int):
             action = self.A[action]
 
@@ -158,8 +204,7 @@ class PacmanEnv(gym.Env):
         self.render()
         reward = self.game.state.data.scoreChange
 
-        ## #############################
-        ## move the ghosts
+        # move the ghosts
         if self.move_ghosts:
             if not self.game.gameOver:
                 for agentIndex in range(1, len(self.game.agents)):
@@ -170,10 +215,7 @@ class PacmanEnv(gym.Env):
                     reward += self.game.state.data.scoreChange
                     if self.game.gameOver:
                         break
-        ##############################
 
-
-        # self.render()
         done = self.game.gameOver or self._check_if_maxsteps()
 
 
@@ -186,8 +228,6 @@ class PacmanEnv(gym.Env):
         return self.render(self.render_mode), reward, done, info
 
     def reset(self, observation_mode="human"):
-        # self.beQuiet = self.game_index < self.numTraining + self.numGhostTraining
-
         if self.beQuiet:
             # Suppress output and graphics
             from .pacman import textDisplay
@@ -197,7 +237,6 @@ class PacmanEnv(gym.Env):
         else:
             self.gameDisplay = self.display
             self.rules.quiet = False
-            # self.display.initialize()
 
         sampled_layout = self.select_room()
         self.game = self.rules.newGame(
@@ -209,26 +248,28 @@ class PacmanEnv(gym.Env):
             self.catchExceptions,
             self.symX,
             self.symY,
-            self.background
+            self.background_filename
         )
         self.game.start_game()
         return self.render(self.render_mode)
 
     def downsampling(self, x):
         dz = block_reduce(x, block_size=(self.downsampling_size, self.downsampling_size), func=np.mean)
-        # dz = th.tensor(dz)
-        # plt.imshow(dz, cmap="gray", vmin=-1, vmax=1)
-        # plt.show()
         return dz
 
     def render(self, mode="human", close=False):
         img =  self.game.compose_img(mode) # calls the fast renderer
         if mode == "gray":
             return self.downsampling(img)
-        else:
+        elif mode == "human":
             return img
-    # def my_render(self):
-    #     return self.game.my_render(grid_size=self.grid_size)
+        elif mode == "dict":
+            return {
+                "gray" : self.downsampling(img),
+                "tinygrid": self.game.compose_img(mode="tinygrid")
+            }
+
+
 
     def get_legal_actions(self, agentIndex):
         return self.game.state.getLegalActions(agentIndex)

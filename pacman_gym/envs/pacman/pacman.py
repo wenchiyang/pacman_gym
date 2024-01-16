@@ -319,7 +319,7 @@ class ClassicGameRules:
             reward_food=self.reward_food,
             reward_time=self.reward_time)
         initState.initialize( layout, len(ghostAgents))
-        game = Game(agents, display, self, catchExceptions=catchExceptions,symX=symX, symY=symY, background=background)
+        game = Game(agents, display, self, catchExceptions=catchExceptions, symX=symX, symY=symY, background_filename=background)
         game.state = initState
         self.initialState = initState.deepCopy()
         self.quiet = quiet
