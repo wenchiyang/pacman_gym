@@ -20,7 +20,7 @@ it crashes a ghost.
 
 The map in all episodes are the same.
 
-![](./screenshot.jpg)
+<img src="./screenshot.jpg" alt="Example Image" width="200">
 
 ## installation
 
