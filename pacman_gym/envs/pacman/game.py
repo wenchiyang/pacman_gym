@@ -1128,8 +1128,9 @@ class Game:
         elif mode == "dict":
             gray = self.rgb2gray(canvas)
             return gray
-        elif mode == "rgb":
+        elif mode == "state_pixels":
             return canvas
+
 
     def render(self, mode):
         """

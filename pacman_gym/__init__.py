@@ -1,9 +1,5 @@
 from gym.envs.registration import register
-
-register(
-    id='GoalFinding-v0',
-    entry_point='pacman_gym.envs:GoalFindingEnv',
-)
+from pacman_gym.envs.pacmanInterface import sample_layout
 
 register(
     id='Pacman-v0',
